@@ -21,6 +21,19 @@ class Employee {
         int totalSingle;
         int totalFamily;
     public:
+    /*Employee()
+    {
+        for(int i = 0; i < maxNumA; i++) {
+        tableSingle[i].push(0);
+        }
+        // Initialize all family table queues with 0
+        for(int j = 0; j < maxNumB; j++) {
+            tableFamily[j].push(0);
+        }
+        totalSingle = 0;
+        totalFamily = 0;
+    };*/
+
         void checkTable();
         void showTable();
 
@@ -369,16 +382,30 @@ class selectionSystem {
     private:
         int inputNumSelected;
         int actionSelected;
+        Employee maxA;
+        Employee maxB;
         std::vector<std::queue<int>> queueNumS[10];  // default 10 single‑table queues
         std::vector<std::queue<int>> queueNumF[5];   // default  5 family‑table queuess
     public:
         void selectRole(Employee &ePath, Customer &cPath);
+        void initializeQ(Employee, Employee);
         //selectionSystem(size_t s = 10, size_t f = 5)  : queueNumS(s), queueNumF(f) {}
 };
 
+void selectionSystem::initializeQ(Employee maxA, Employee maxB) {
+    for(int i=0; i<maxA.getmaxNumA(); i++) 
+    {
+        maxA.setQueueSingle(i,0);
+    }
+    for(int j=0; j<maxB.getmaxNumB(); j++) 
+    {
+        maxB.setQueueFamily(j,0);
+    }
+}
+
 void selectionSystem::selectRole(Employee &ePath, Customer &cPath)
 {
-    cout<<"-----Select Your Role Path------\n"<<endl;
+    cout<<"-----Select Your Role Path------"<<endl;
         
     //Get input for choosing role or exit the loop//
     while (inputNumSelected != 3)
@@ -415,7 +442,11 @@ int main()
 {
     selectionSystem start;
     Employee employeePath;
+    Employee initA;
+    Employee initB;
     Customer customerPath;
+    selectionSystem emp;
+    emp.initializeQ(initA, initB);
     cout<<"Welcome to the Restaurant Queue System!"<<endl;
     start.selectRole(employeePath, customerPath);
 }
