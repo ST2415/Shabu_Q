@@ -4,21 +4,17 @@
 #include <queue>
 #include <string>
 
-//#define CPPHTTPLIB_SINGLE_THREAD
 #include "yhirose-cpp-httplib-68fa9bc/httplib.h"
+#include "EMPLOYEE_H_INCLUDED.h"
+#include "CUSTOMER_H_INCLUDED.h"
 
 using namespace std;
 using namespace httplib;
 
-// --- ข้อมูลคิวและโต๊ะ (เหมือนในคลาส Employee ของเรา) ---
-queue<int> queueSingle;
-queue<int> queueFamily;
-int tableSingle[10] = {0};
-int tableFamily[5] = {0};
-int nextTicketSingle = 1;
-int nextTicketFamily = 1;
+Employee shopEmployee;
+Customer shopCustomer;
 
-// ฟังก์ชันสำหรับตั้งค่า CORS (อนุญาตให้หน้าเว็บ HTML คุยกับ C++ ข้ามไฟล์ได้)
+// ฟังก์ชันสำหรับตั้งค่า CORS
 void set_cors(Response &res) {
     res.set_header("Access-Control-Allow-Origin", "*");
     res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -28,52 +24,48 @@ void set_cors(Response &res) {
 int main() {
     Server svr;
 
-    // 1. ดักจับ OPTIONS (Preflight Request ของเบราว์เซอร์)
     svr.Options(R"(.*)", [](const Request& req, Response& res) {
         set_cors(res);
     });
 
     // ==============================================================
-    // API 1: ส่งข้อมูลสถานะร้านทั้งหมดกลับไปให้หน้าเว็บ (GET /api/get-queue)
+    // API 1: ดึงสถานะคิวและโต๊ะจาก Object Employee
     // ==============================================================
     svr.Get("/api/get-queue", [](const Request& req, Response& res) {
         set_cors(res);
         
-        // สร้างข้อความรูปแบบ JSON แบบ Manual เพื่อส่งให้ Javascript
         string json = "{";
-        json += "\"waitSingle\": " + to_string(queueSingle.size()) + ",";
-        json += "\"nextSingle\": " + (queueSingle.empty() ? "\"-\"" : "\"" + to_string(queueSingle.front()) + "\"") + ",";
-        json += "\"waitFamily\": " + to_string(queueFamily.size()) + ",";
-        json += "\"nextFamily\": " + (queueFamily.empty() ? "\"-\"" : "\"" + to_string(queueFamily.front()) + "\"") + ",";
+        json += "\"waitSingle\": " + to_string(shopEmployee.sizeOfSingle()) + ",";
+        json += "\"nextSingle\": " + (shopEmployee.sizeOfSingle() == 0 ? "\"-\"" : "\"" + to_string(shopEmployee.getQueueSingle()) + "\"") + ",";
+        json += "\"waitFamily\": " + to_string(shopEmployee.sizeOfFamily()) + ",";
+        json += "\"nextFamily\": " + (shopEmployee.sizeOfFamily() == 0 ? "\"-\"" : "\"" + to_string(shopEmployee.getQueueFamily()) + "\"") + ",";
         
-        // สร้าง Array ของโต๊ะ
+        // ดึงข้อมูลโต๊ะผ่าน Getter ที่เราเพิ่งสร้าง
         json += "\"tableSingle\": [";
-        for(int i=0; i<10; i++) { json += to_string(tableSingle[i]) + (i<9 ? "," : ""); }
+        for(int i=0; i<10; i++) { json += to_string(shopEmployee.getTableSingle(i)) + (i<9 ? "," : ""); }
         json += "], \"tableFamily\": [";
-        for(int i=0; i<5; i++) { json += to_string(tableFamily[i]) + (i<4 ? "," : ""); }
+        for(int i=0; i<5; i++) { json += to_string(shopEmployee.getTableFamily(i)) + (i<4 ? "," : ""); }
         json += "]}";
 
         res.set_content(json, "application/json");
     });
 
     // ==============================================================
-    // API 2: ลูกค้ากดรับคิว (POST /api/add-queue)
+    // API 2: รับคิวเข้า Object Employee
     // ==============================================================
     svr.Post("/api/add-queue", [](const Request& req, Response& res) {
         set_cors(res);
-        
-        // ค้นหาว่าลูกค้าส่งคำว่า "Single" หรือ "Family" มา
         bool isSingle = (req.body.find("Single") != string::npos);
         int myQ = 0, waiting = 0;
         
         if (isSingle) {
-            myQ = nextTicketSingle++;
-            queueSingle.push(myQ);
-            waiting = queueSingle.size() - 1;
+            myQ = shopEmployee.generateNextQSingle();
+            shopEmployee.setQueueSingle(myQ);
+            waiting = shopEmployee.sizeOfSingle() - 1;
         } else {
-            myQ = nextTicketFamily++;
-            queueFamily.push(myQ);
-            waiting = queueFamily.size() - 1;
+            myQ = shopEmployee.generateNextQFamily();
+            shopEmployee.setQueueFamily(myQ);
+            waiting = shopEmployee.sizeOfFamily() - 1;
         }
         
         string json = "{\"myQ\": " + to_string(myQ) + ", \"waiting\": " + to_string(waiting) + "}";
@@ -82,31 +74,31 @@ int main() {
     });
 
     // ==============================================================
-    // API 3: พนักงานเรียกคิวเข้าโต๊ะ (POST /api/call-queue)
+    // API 3: พนักงานดึงคิวลงโต๊ะผ่าน Object Employee
     // ==============================================================
     svr.Post("/api/call-queue", [](const Request& req, Response& res) {
         set_cors(res);
         bool isSingle = (req.body.find("Single") != string::npos);
         string msg = "";
         
-        if (isSingle && !queueSingle.empty()) {
+        if (isSingle && shopEmployee.sizeOfSingle() > 0) {
             bool isFull = true;
             for (int i = 0; i < 10; i++) {
-                if (tableSingle[i] == 0) {
-                    tableSingle[i] = queueSingle.front();
-                    queueSingle.pop();
+                if (shopEmployee.getTableSingle(i) == 0) {
+                    shopEmployee.setTableSingle(i, shopEmployee.getQueueSingle());
+                    shopEmployee.popFromSingle();
                     msg = "Assigned to Single Table " + to_string(i+1);
                     cout << ">> [Employee] " << msg << endl;
                     isFull = false; break;
                 }
             }
             if (isFull) { msg = "Table is full!"; cout << ">> " << msg << endl; }
-        } else if (!isSingle && !queueFamily.empty()) {
+        } else if (!isSingle && shopEmployee.sizeOfFamily() > 0) {
             bool isFull = true;
             for (int i = 0; i < 5; i++) {
-                if (tableFamily[i] == 0) {
-                    tableFamily[i] = queueFamily.front();
-                    queueFamily.pop();
+                if (shopEmployee.getTableFamily(i) == 0) {
+                    shopEmployee.setTableFamily(i, shopEmployee.getQueueFamily());
+                    shopEmployee.popFromFamily();
                     msg = "Assigned to Family Table " + to_string(i+1);
                     cout << ">> [Employee] " << msg << endl;
                     isFull = false; break;
@@ -116,12 +108,11 @@ int main() {
         } else {
             msg = "No customer in queue!";
         }
-        
         res.set_content("{\"message\": \"" + msg + "\"}", "application/json");
     });
 
     // ==============================================================
-    // API 4: พนักงานกดเช็คบิลออกจากโต๊ะ (POST /api/checkout)
+    // API 4: เคลียร์โต๊ะผ่าน Object Employee
     // ==============================================================
     svr.Post("/api/checkout", [](const Request& req, Response& res) {
         set_cors(res);
@@ -138,24 +129,23 @@ int main() {
         
         if (index >= 0) {
             if (isSingle && index < 10) {
-                if (tableSingle[index] == 0) {
+                if (shopEmployee.getTableSingle(index) == 0) {
                     msg = "Table is already empty!";
                 } else {
                     msg = "Checkout Single Table " + to_string(index+1);
-                    tableSingle[index] = 0;
+                    shopEmployee.setTableSingle(index, 0);
                 }
                 cout << ">> [Employee] " << msg << endl;
             } else if (!isSingle && index < 5) {
-                if (tableFamily[index] == 0) {
+                if (shopEmployee.getTableFamily(index) == 0) {
                     msg = "Table is already empty!";
                 } else {
                     msg = "Checkout Family Table " + to_string(index+1);
-                    tableFamily[index] = 0;
+                    shopEmployee.setTableFamily(index, 0);
                 }
                 cout << ">> [Employee] " << msg << endl;
             }
         }
-        
         res.set_content("{\"message\": \"" + msg + "\"}", "application/json");
     });
 
@@ -164,7 +154,6 @@ int main() {
     cout << "  Listening on http://localhost:8080" << endl;
     cout << "=========================================" << endl;
     
-    svr.listen("localhost", 8080); // เปิดเซิร์ฟเวอร์ที่พอร์ต 8080
-    
+    svr.listen("localhost", 8080);
     return 0;
 }

@@ -32,6 +32,12 @@ class Employee {
         int getmaxNumA() { return sizeof(tableSingle)/sizeof(tableSingle[0]); }
         int getmaxNumB() { return sizeof(tableFamily)/sizeof(tableFamily[0]); }
 
+        // --- เพิ่มฟังก์ชันเพื่อให้ Web Server ดึงข้อมูลโต๊ะได้ ---
+        int getTableSingle(int index) { return tableSingle[index]; }
+        void setTableSingle(int index, int value) { tableSingle[index] = value; }
+        int getTableFamily(int index) { return tableFamily[index]; }
+        void setTableFamily(int index, int value) { tableFamily[index] = value; }
+
         int generateNextQSingle() { return waitingQueueS++; }
         int generateNextQFamily() { return waitingQueueF++; }
 
