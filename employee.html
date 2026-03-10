@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Employee Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <h2>👨‍🍳 Employee Dashboard</h2>
+            <a href="index.html"><button class="danger">Back to Home</button></a>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Single Table Queue</h3>
+                <p>Waiting: <b id="wait-single">0</b></p>
+                <p>Next Queue: <b id="next-single">-</b></p>
+                <button onclick="callQueue('Single')">Call Next Single</button>
+            </div>
+            <div class="card">
+                <h3>Family Table Queue</h3>
+                <p>Waiting: <b id="wait-family">0</b></p>
+                <p>Next Queue: <b id="next-family">-</b></p>
+                <button onclick="callQueue('Family')">Call Next Family</button>
+            </div>
+        </div>
+
+        <h3>Table Status (Click to Checkout)</h3>
+        
+        <h4>Single Tables (10)</h4>
+        <div id="single-tables-container" class="tables-container"></div>
+        
+        <h4>Family Tables (5)</h4>
+        <div id="family-tables-container" class="tables-container"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
